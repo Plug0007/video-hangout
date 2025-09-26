@@ -708,6 +708,144 @@ export type Database = {
           },
         ]
       }
+      room_invites: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          invite_token: string
+          is_active: boolean | null
+          max_uses: number | null
+          room_id: string
+          used_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          invite_token: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          room_id: string
+          used_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          invite_token?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          room_id?: string
+          used_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_invites_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "watch_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_messages: {
+        Row: {
+          content: string
+          created_at: string
+          emoji_reaction: string | null
+          id: string
+          is_pinned: boolean | null
+          message_type: string | null
+          room_id: string
+          sender_id: string | null
+          sender_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          emoji_reaction?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          message_type?: string | null
+          room_id: string
+          sender_id?: string | null
+          sender_name: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          emoji_reaction?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          message_type?: string | null
+          room_id?: string
+          sender_id?: string | null
+          sender_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "watch_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_participants: {
+        Row: {
+          display_name: string
+          id: string
+          is_muted: boolean | null
+          is_online: boolean | null
+          is_speaking: boolean | null
+          is_video_on: boolean | null
+          joined_at: string
+          last_seen: string | null
+          role: Database["public"]["Enums"]["room_role"]
+          room_id: string
+          user_id: string | null
+        }
+        Insert: {
+          display_name: string
+          id?: string
+          is_muted?: boolean | null
+          is_online?: boolean | null
+          is_speaking?: boolean | null
+          is_video_on?: boolean | null
+          joined_at?: string
+          last_seen?: string | null
+          role?: Database["public"]["Enums"]["room_role"]
+          room_id: string
+          user_id?: string | null
+        }
+        Update: {
+          display_name?: string
+          id?: string
+          is_muted?: boolean | null
+          is_online?: boolean | null
+          is_speaking?: boolean | null
+          is_video_on?: boolean | null
+          joined_at?: string
+          last_seen?: string | null
+          role?: Database["public"]["Enums"]["room_role"]
+          room_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_participants_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "watch_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           cover_image_url: string | null
@@ -1141,6 +1279,69 @@ export type Database = {
         }
         Relationships: []
       }
+      watch_rooms: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          current_position: number | null
+          current_video_title: string | null
+          current_video_url: string | null
+          description: string | null
+          expires_at: string | null
+          host_id: string | null
+          id: string
+          is_playing: boolean | null
+          is_private: boolean
+          last_sync_at: string | null
+          max_participants: number | null
+          name: string
+          password_hash: string | null
+          room_code: string
+          status: Database["public"]["Enums"]["room_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          current_position?: number | null
+          current_video_title?: string | null
+          current_video_url?: string | null
+          description?: string | null
+          expires_at?: string | null
+          host_id?: string | null
+          id?: string
+          is_playing?: boolean | null
+          is_private?: boolean
+          last_sync_at?: string | null
+          max_participants?: number | null
+          name: string
+          password_hash?: string | null
+          room_code: string
+          status?: Database["public"]["Enums"]["room_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          current_position?: number | null
+          current_video_title?: string | null
+          current_video_url?: string | null
+          description?: string | null
+          expires_at?: string | null
+          host_id?: string | null
+          id?: string
+          is_playing?: boolean | null
+          is_private?: boolean
+          last_sync_at?: string | null
+          max_participants?: number | null
+          name?: string
+          password_hash?: string | null
+          room_code?: string
+          status?: Database["public"]["Enums"]["room_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1151,6 +1352,10 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_messages: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_expired_rooms: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
@@ -1176,6 +1381,8 @@ export type Database = {
         | "completed"
         | "cancelled"
       message_status: "sent" | "delivered" | "read"
+      room_role: "host" | "co_host" | "participant"
+      room_status: "active" | "paused" | "ended"
       session_type: "permanent" | "temporary"
       user_role: "admin" | "teacher"
     }
@@ -1314,6 +1521,8 @@ export const Constants = {
         "cancelled",
       ],
       message_status: ["sent", "delivered", "read"],
+      room_role: ["host", "co_host", "participant"],
+      room_status: ["active", "paused", "ended"],
       session_type: ["permanent", "temporary"],
       user_role: ["admin", "teacher"],
     },
