@@ -2,41 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
-/* WatchParty Design System - Cinematic Dark Theme */
+/* WatchParty Design System - Modern Streaming Platform */
 
 @layer base {
   :root {
-    /* Core Dark Theme */
-    --background: 220 15% 8%;
-    --foreground: 220 10% 95%;
+    /* Deep Navy-Black Foundation */
+    --bg-900: 7 16 35; /* #071023 */
+    --bg-800: 14 27 42; /* #0e1b2a */
+    --background: 7 16 35;
+    --foreground: 230 15% 91%; /* #e6eef8 */
     
-    /* Surface Colors */
+    /* Card with Gradient Effect */
     --card: 220 15% 10%;
-    --card-foreground: 220 10% 95%;
+    --card-foreground: 230 15% 91%;
+    --card-gradient: linear-gradient(180deg, rgba(38,24,57,0.35), rgba(10,12,24,0.6));
     
     --popover: 220 15% 12%;
-    --popover-foreground: 220 10% 95%;
+    --popover-foreground: 230 15% 91%;
     
-    /* Brand Colors - Purple/Blue Theme */
-    --primary: 266 85% 65%;
-    --primary-foreground: 220 10% 98%;
-    --primary-glow: 266 85% 75%;
+    /* Vibrant Accent Colors */
+    --accent-1: 266 100% 66%; /* #7c4dff vibrant purple */
+    --accent-2: 188 92% 59%; /* #4dd0e1 teal glow */
+    --primary: 266 100% 66%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 266 100% 76%;
     
     --secondary: 220 15% 15%;
     --secondary-foreground: 220 10% 90%;
     
-    --accent: 266 60% 50%;
-    --accent-foreground: 220 10% 98%;
+    --accent: 188 92% 59%;
+    --accent-foreground: 0 0% 100%;
     
-    /* Interactive States */
+    /* Text Colors */
+    --text-primary: 230 15% 91%; /* #e6eef8 */
     --muted: 220 15% 12%;
-    --muted-foreground: 220 8% 60%;
+    --muted-foreground: 213 13% 67%; /* #9aa6b2 */
     
-    --destructive: 0 75% 60%;
-    --destructive-foreground: 220 10% 98%;
+    --destructive: 5 92% 70%; /* #ff6b6b */
+    --destructive-foreground: 0 0% 100%;
     
     --success: 142 76% 36%;
-    --success-foreground: 220 10% 98%;
+    --success-foreground: 0 0% 100%;
     
     --warning: 38 92% 50%;
     --warning-foreground: 220 10% 10%;
@@ -44,7 +50,7 @@
     /* UI Elements */
     --border: 220 15% 18%;
     --input: 220 15% 15%;
-    --ring: 266 85% 65%;
+    --ring: 266 100% 66%;
     
     --radius: 0.75rem;
     
@@ -56,19 +62,22 @@
     /* Chat */
     --chat-bg: 220 15% 9%;
     --chat-message: 220 15% 12%;
-    --chat-highlight: 266 85% 65% / 0.1;
+    --chat-highlight: 266 100% 66% / 0.1;
     
-    /* Gradients */
+    /* Cinematic Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-hero: linear-gradient(135deg, hsl(266 85% 65%), hsl(280 85% 70%), hsl(294 85% 75%));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--accent-1)), hsl(var(--accent-2)));
+    --gradient-hero: linear-gradient(135deg, hsl(266 100% 66%), hsl(280 100% 70%), hsl(188 92% 59%));
     --gradient-bg: linear-gradient(180deg, hsl(var(--background)), hsl(220 15% 6%));
+    --gradient-card: linear-gradient(180deg, rgba(38,24,57,0.35), rgba(10,12,24,0.6));
     
-    /* Shadows */
+    /* Elegant Shadows with Brand Colors */
     --shadow-primary: 0 10px 30px hsl(var(--primary) / 0.3);
-    --shadow-card: 0 4px 20px hsl(220 20% 4% / 0.5);
+    --shadow-accent: 0 10px 30px -10px hsl(var(--primary) / 0.3);
     --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
+    --shadow-card: 0 4px 20px hsl(220 20% 4% / 0.5);
     
-    /* Animations */
+    /* Smooth Motion */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -147,9 +156,38 @@
   }
   
   .glass-effect {
-    background: hsl(var(--card) / 0.8);
+    background: var(--gradient-card);
     backdrop-filter: blur(12px);
     border: 1px solid hsl(var(--border) / 0.5);
+  }
+  
+  /* Reaction Animations */
+  .reaction-float {
+    animation: reactionFloat 2s ease-out forwards;
+  }
+  
+  @keyframes reactionFloat {
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: translateY(-30px) scale(1.2);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-60px) scale(0.8);
+    }
+  }
+  
+  /* Hover Scale Animation */
+  .hover-scale {
+    transition: transform 0.2s ease;
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.02);
   }
 }
 

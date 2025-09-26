@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import RoomPage from './RoomPage';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,8 +43,8 @@ interface ChatMessage {
 }
 
 const Room = () => {
-  const { roomId } = useParams();
-  const [isPlaying, setIsPlaying] = useState(false);
+  return <RoomPage />;
+};
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(300); // 5 minutes mock duration
   const [volume, setVolume] = useState(100);
