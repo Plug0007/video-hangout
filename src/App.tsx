@@ -8,7 +8,6 @@ import Home from "./pages/Home";
 import Room from "./pages/Room";
 import NotFound from "./pages/NotFound";
 
-// 🔑 NEW: import auth stuff
 import { AuthProvider } from "./auth/AuthProvider";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
@@ -20,15 +19,11 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      {/* 🔑 Wrap everything in AuthProvider */}
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<LoginPage />} />
-
-            {/* Protected routes */}
             <Route
               path="/room/:roomId"
               element={
@@ -37,8 +32,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-
-            {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
