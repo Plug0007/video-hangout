@@ -1363,12 +1363,26 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_user_room_ids: {
+        Args: { _user_id: string }
+        Returns: {
+          room_id: string
+        }[]
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      user_can_manage_room: {
+        Args: { _room_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_has_role: {
         Args: { role: Database["public"]["Enums"]["user_role"] }
+        Returns: boolean
+      }
+      user_is_room_participant: {
+        Args: { _room_id: string; _user_id: string }
         Returns: boolean
       }
     }
