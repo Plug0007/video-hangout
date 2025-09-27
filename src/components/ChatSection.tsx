@@ -21,17 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-
-interface ChatMessage {
-  id: string;
-  sender_id: string;
-  sender_name: string;
-  content: string;
-  message_type: 'text' | 'emoji' | 'system';
-  emoji_reaction?: string;
-  is_pinned: boolean;
-  created_at: string;
-}
+import type { ChatMessage } from '@/components/ParticipantsList';
 
 interface ChatSectionProps {
   roomId: string;
@@ -178,7 +168,7 @@ export function ChatSection({
                   </div>
 
                   {/* Message Actions */}
-                  {(isHost || message.sender_id === currentUser?.id) && (
+                  {(isHost || (message.sender_id && message.sender_id === currentUser?.id)) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -198,7 +188,7 @@ export function ChatSection({
                             {message.is_pinned ? 'Unpin' : 'Pin'} Message
                           </DropdownMenuItem>
                         )}
-                        {(isHost || message.sender_id === currentUser?.id) && (
+                        {(isHost || (message.sender_id && message.sender_id === currentUser?.id)) && (
                           <DropdownMenuItem 
                             onClick={() => onDeleteMessage?.(message.id)}
                             className="text-destructive"
