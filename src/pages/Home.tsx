@@ -5,14 +5,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Play, Users, Mic, Video, Shield, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { roomService } from "@/services/roomService";
 
 const Home = () => {
   const [roomCode, setRoomCode] = useState("");
+  const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
 
-  const handleCreateRoom = () => {
-    const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    navigate(`/room/${newRoomId}`);
+  const handleCreateRoom = async () => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to create a room.", variant: "destructive" });
+      return;
+    }
+    setCreating(true);
+    const { room, error } = await roomService.createRoom("New Watch Party");
+    setCreating(false);
+    if (error || !room) {
+      toast({ title: "Failed to create room", description: error?.message || "Please try again.", variant: "destructive" });
+      return;
+    }
+    navigate(`/room/${room.room_code}`);
   };
 
   const handleJoinRoom = () => {
@@ -83,9 +99,10 @@ const Home = () => {
                   variant="hero" 
                   size="lg" 
                   className="w-full"
+                  disabled={creating}
                 >
                   <Play className="w-5 h-5 mr-2" />
-                  Create New Room
+                  {creating ? 'Creating…' : 'Create New Room'}
                 </Button>
               </CardContent>
             </Card>

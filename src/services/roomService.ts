@@ -279,11 +279,14 @@ class RoomService {
 
   async getRoomData(roomId: string): Promise<{ room?: Room; error?: any }> {
     try {
-      const { data: room, error } = await supabase
+      const isUuid = /^[0-9a-fA-F-]{36}$/.test(roomId);
+      let query = supabase
         .from('watch_rooms')
-        .select('*')
-        .eq('id', roomId)
-        .single();
+        .select('*');
+
+      query = isUuid ? query.eq('id', roomId) : query.eq('room_code', roomId.toUpperCase());
+
+      const { data: room, error } = await query.single();
 
       return { room, error };
     } catch (error) {
