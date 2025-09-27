@@ -1,49 +1,37 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "../supabaseClient";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
+  const [user, setUser] = useState(supabase.auth.user());
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (token) {
-      // Example: fetch user profile using token
-      fetch("/api/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
-        .then((data) => setUser(data.user))
-        .catch(() => {
-          setUser(null);
-          setToken(null);
-          localStorage.removeItem("token");
-        });
-    }
-  }, [token]);
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => listener.unsubscribe();
+  }, []);
 
   const login = async (email, password) => {
-    const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Login failed");
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
 
-    setToken(data.token);
-    localStorage.setItem("token", data.token);
+    if (error) throw new Error(error.message);
     setUser(data.user);
+    return data.user;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    setToken(null);
-    localStorage.removeItem("token");
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
