@@ -18,7 +18,7 @@ const Home = () => {
 
   const handleCreateRoom = async () => {
     if (!user) {
-      toast({ title: "Sign in required", description: "Please sign in to create a room.", variant: "destructive" });
+      navigate("/auth");
       return;
     }
     setCreating(true);

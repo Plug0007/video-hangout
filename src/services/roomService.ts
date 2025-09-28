@@ -86,13 +86,20 @@ class RoomService {
 
       if (roomError) return { error: roomError };
 
+      // Get user profile for display name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .single();
+
       // Add creator as host participant
       const { error: participantError } = await supabase
         .from('room_participants')
         .insert({
           room_id: room.id,
           user_id: user.id,
-          display_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'Host',
+          display_name: profile?.display_name || user.email?.split('@')[0] || 'Host',
           role: 'host',
         });
 
@@ -142,11 +149,22 @@ class RoomService {
         return { error: new Error('Room is full') };
       }
 
+      // Get or use provided display name
+      let finalDisplayName = displayName;
+      if (user && !displayName) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .single();
+        finalDisplayName = profile?.display_name || 'Anonymous User';
+      }
+
       // Add participant or update if already exists
       const participantData = {
         room_id: room.id,
         user_id: user?.id,
-        display_name: displayName,
+        display_name: finalDisplayName || 'Anonymous User',
         role: 'participant' as const,
         is_online: true,
         last_seen: new Date().toISOString(),
