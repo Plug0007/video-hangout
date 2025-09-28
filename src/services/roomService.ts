@@ -228,16 +228,28 @@ class RoomService {
   async updatePlaybackState(
     roomId: string,
     position: number,
-    isPlaying: boolean
+    isPlaying: boolean,
+    videoUrl?: string,
+    videoTitle?: string
   ): Promise<{ error?: any }> {
     try {
+      // Convert room code to room UUID if needed
+      const { room, error: roomError } = await this.getRoomData(roomId);
+      if (roomError || !room) return { error: roomError || new Error('Room not found') };
+
+      const updateData: any = {
+        current_position: position,
+        is_playing: isPlaying,
+        last_sync_at: new Date().toISOString(),
+      };
+
+      if (videoUrl !== undefined) updateData.current_video_url = videoUrl;
+      if (videoTitle !== undefined) updateData.current_video_title = videoTitle;
+
       const { error } = await supabase
         .from('watch_rooms')
-        .update({
-          current_position: position,
-          is_playing: isPlaying,
-        })
-        .eq('id', roomId);
+        .update(updateData)
+        .eq('id', room.id);
 
       return { error };
     } catch (error) {
@@ -254,20 +266,19 @@ class RoomService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { error: new Error('Authentication required') };
 
-      // Get sender name
-      const { data: participant } = await supabase
-        .from('room_participants')
+      // Get sender name from profile
+      const { data: profile } = await supabase
+        .from('profiles')
         .select('display_name')
-        .eq('room_id', roomId)
-        .eq('user_id', user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
 
       const { error } = await supabase
         .from('room_messages')
         .insert({
           room_id: roomId,
           sender_id: user.id,
-          sender_name: participant?.display_name || 'Anonymous',
+          sender_name: profile?.display_name || user.email?.split('@')[0] || 'Anonymous',
           content,
           message_type: messageType,
         });
@@ -314,10 +325,14 @@ class RoomService {
 
   async getParticipants(roomId: string): Promise<{ participants?: Participant[]; error?: any }> {
     try {
+      // Convert room code to room UUID if needed
+      const { room, error: roomError } = await this.getRoomData(roomId);
+      if (roomError || !room) return { error: roomError || new Error('Room not found') };
+
       const { data: participants, error } = await supabase
         .from('room_participants')
         .select('*')
-        .eq('room_id', roomId)
+        .eq('room_id', room.id)
         .order('joined_at');
 
       return { participants, error };
@@ -328,10 +343,14 @@ class RoomService {
 
   async getMessages(roomId: string): Promise<{ messages?: ChatMessage[]; error?: any }> {
     try {
+      // Convert room code to room UUID if needed
+      const { room, error: roomError } = await this.getRoomData(roomId);
+      if (roomError || !room) return { error: roomError || new Error('Room not found') };
+
       const { data, error } = await supabase
         .from('room_messages')
         .select('*')
-        .eq('room_id', roomId)
+        .eq('room_id', room.id)
         .order('created_at');
 
       if (error) return { error };
