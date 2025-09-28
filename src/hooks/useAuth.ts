@@ -38,7 +38,7 @@ export function useAuth() {
   const signUp = async (email: string, password: string, displayName: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -48,6 +48,24 @@ export function useAuth() {
         }
       }
     });
+
+    // If signup successful and user is created, create or update profile
+    if (!error && data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: data.user.id,
+          email: email,
+          name: displayName,
+          display_name: displayName,
+          role: 'teacher'
+        });
+      
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+      }
+    }
+    
     return { error };
   };
 

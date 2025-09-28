@@ -91,7 +91,7 @@ class RoomService {
         .from('profiles')
         .select('display_name')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       // Add creator as host participant
       const { error: participantError } = await supabase
@@ -156,7 +156,7 @@ class RoomService {
           .from('profiles')
           .select('display_name')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         finalDisplayName = profile?.display_name || 'Anonymous User';
       }
 

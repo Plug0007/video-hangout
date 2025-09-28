@@ -2,16 +2,21 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-export interface Profile {
+// Use the actual database schema type
+type DatabaseProfile = {
   id: string;
+  name: string;
   display_name: string;
-  avatar_url?: string;
+  email: string;
+  avatar_url: string | null;
+  role: 'admin' | 'teacher';
+  department_id: number | null;
   created_at: string;
   updated_at: string;
-}
+};
 
 export function useProfile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<DatabaseProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -46,7 +51,7 @@ export function useProfile() {
     }
   };
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = async (updates: Partial<DatabaseProfile>) => {
     if (!user) return { error: new Error('No user logged in') };
 
     try {
