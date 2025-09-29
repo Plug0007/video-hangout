@@ -1,36 +1,28 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  Maximize,
-  Settings,
-  Upload,
-} from 'lucide-react';
-import { usePlaybackSync } from '@/hooks/usePlaybackSync';
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Play, Pause, Volume2, VolumeX, Maximize, Upload, Link, Users, MessageCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { usePlaybackSync } from "@/hooks/usePlaybackSync";
+import { roomService } from "@/services/roomService";
 
 interface VideoPlayerProps {
   roomData: any;
   isHost: boolean;
   currentUser: any;
-  onPlaybackSync: (state: any) => void;
-  onVideoSourceChange?: (url: string, title: string) => void;
+  onPlaybackSync: (data: any) => void;
+  onVideoSourceChange?: (url: string, title?: string) => void;
 }
 
-export function VideoPlayer({
-  roomData,
-  isHost,
-  currentUser,
-  onPlaybackSync,
-  onVideoSourceChange,
-}: VideoPlayerProps) {
+const VideoPlayer = ({ roomData, isHost, currentUser, onPlaybackSync, onVideoSourceChange }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [showControls, setShowControls] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showControls, setShowControls] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [isValidUrl, setIsValidUrl] = useState(false);
+  const { toast } = useToast();
 
   const {
     position,
@@ -42,42 +34,94 @@ export function VideoPlayer({
     handleSeek,
     handleTimeUpdate,
     handleVolumeChange,
-    formatTime,
     applySyncCorrection,
+    formatTime,
   } = usePlaybackSync({
     videoRef,
     isHost,
     onStateChange: onPlaybackSync,
   });
 
-  // Apply sync corrections from other participants
+  // Apply sync data from room
   useEffect(() => {
-    if (roomData?.syncData && !isHost) {
-      applySyncCorrection(roomData.syncData);
+    if (!isHost && roomData && videoRef.current) {
+      const syncData = {
+        position: roomData.current_position || 0,
+        isPlaying: roomData.is_playing || false,
+        paused: !roomData.is_playing,
+        timestamp: Date.now(),
+        hostId: roomData.host_id,
+      };
+      applySyncCorrection(syncData);
     }
-  }, [roomData?.syncData, applySyncCorrection, isHost]);
+  }, [roomData?.current_position, roomData?.is_playing, roomData?.last_sync_at, isHost, applySyncCorrection]);
 
-  // Handle video source changes
+  // Update video source when room data changes
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !roomData?.current_video_url) return;
-
-    if (video.src !== roomData.current_video_url) {
-      video.src = roomData.current_video_url;
-      video.load();
+    if (roomData?.current_video_url && videoRef.current && videoRef.current.src !== roomData.current_video_url) {
+      videoRef.current.src = roomData.current_video_url;
+      videoRef.current.load();
     }
   }, [roomData?.current_video_url]);
 
+  const validateVideoUrl = (url: string) => {
+    if (!url) return false;
+    try {
+      new URL(url);
+      return url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg') || url.includes('.mov');
+    } catch {
+      return false;
+    }
+  };
+
+  const handleUrlChange = (url: string) => {
+    setVideoUrl(url);
+    setIsValidUrl(validateVideoUrl(url));
+  };
+
+  const handleLoadVideo = async () => {
+    if (!isValidUrl || !videoUrl) {
+      toast({ title: "Invalid URL", description: "Please enter a valid video URL", variant: "destructive" });
+      return;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.src = videoUrl;
+      videoRef.current.load();
+      
+      // Extract title from URL
+      const title = videoUrl.split('/').pop()?.split('.')[0] || 'Video';
+      
+      // Update room state if host
+      if (isHost && roomData?.room_code) {
+        await roomService.updatePlaybackState(roomData.room_code, 0, false, videoUrl, title);
+        if (onVideoSourceChange) {
+          onVideoSourceChange(videoUrl, title);
+        }
+      }
+      
+      toast({ title: "Video loaded", description: "Video has been loaded successfully" });
+    }
+  };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !isHost) return;
-
-    // Create object URL for local playback
-    const videoUrl = URL.createObjectURL(file);
-    onVideoSourceChange?.(videoUrl, file.name);
+    if (file && videoRef.current) {
+      const objectUrl = URL.createObjectURL(file);
+      videoRef.current.src = objectUrl;
+      videoRef.current.load();
+      
+      if (isHost && onVideoSourceChange) {
+        onVideoSourceChange(objectUrl, file.name);
+      }
+      
+      toast({ title: "File uploaded", description: "Video file has been loaded successfully" });
+    }
   };
 
   const handlePlayPause = () => {
+    if (!videoRef.current) return;
+    
     if (isPlaying) {
       handlePause();
     } else {
@@ -85,168 +129,204 @@ export function VideoPlayer({
     }
   };
 
-  const handleProgressClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const newPosition = (clickX / rect.width) * duration;
-    handleSeek(newPosition);
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!videoRef.current || !duration) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickPosition = (e.clientX - rect.left) / rect.width;
+    const newTime = clickPosition * duration;
+    
+    handleSeek(newTime);
+  };
+
+  const handleFullscreen = () => {
+    if (videoRef.current) {
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen();
+      }
+    }
   };
 
   return (
-    <div 
-      className="relative bg-black rounded-lg overflow-hidden group aspect-video"
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
-    >
+    <div className="relative bg-black rounded-lg overflow-hidden group">
       {/* Video Element */}
       <video
         ref={videoRef}
-        className="w-full h-full object-contain"
+        className="w-full aspect-video"
+        onTimeUpdate={handleTimeUpdate}
+        onVolumeChange={() => {
+          // This will be handled by the usePlaybackSync hook internally
+        }}
         onPlay={handlePlay}
         onPause={handlePause}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedData={() => {
-          const video = videoRef.current;
-          if (video && roomData?.current_position) {
-            video.currentTime = roomData.current_position;
-          }
-        }}
+        onMouseEnter={() => setShowControls(true)}
+        onMouseLeave={() => setShowControls(false)}
+        poster="/placeholder.svg"
       />
 
-      {/* Video Placeholder */}
+      {/* Video Load Interface (when no video) */}
       {!roomData?.current_video_url && (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto">
-              <Play className="w-12 h-12 text-primary" />
-            </div>
-            <div>
-              <p className="text-white/80 text-lg mb-2">Ready to start watching</p>
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-background/80 to-card/80">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="text-center flex items-center justify-center gap-2">
+                <Play className="w-5 h-5" />
+                Load Video
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               {isHost ? (
-                <div className="space-y-2">
-                  <p className="text-white/60">Upload a video or paste a URL</p>
-                  <Button
-                    onClick={() => fileInputRef.current?.click()}
-                    variant="outline"
-                    size="sm"
-                    className="text-white border-white/20 hover:bg-white/10"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Video
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter video URL (mp4, webm, ogg)"
+                        value={videoUrl}
+                        onChange={(e) => handleUrlChange(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button 
+                        onClick={handleLoadVideo} 
+                        disabled={!isValidUrl}
+                        size="sm"
+                      >
+                        <Link className="w-4 h-4 mr-2" />
+                        Load
+                      </Button>
+                    </div>
+                    {videoUrl && !isValidUrl && (
+                      <p className="text-sm text-destructive">Please enter a valid video URL</p>
+                    )}
+                  </div>
+                  
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-2">or</p>
+                    <Button onClick={() => fileInputRef.current?.click()} variant="outline">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload File
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </div>
+                </>
               ) : (
-                <p className="text-white/60">Waiting for host to add video source</p>
+                <div className="text-center space-y-2">
+                  <p className="text-muted-foreground">Waiting for host to load a video...</p>
+                  <Badge variant="secondary">
+                    <Users className="w-4 h-4 mr-1" />
+                    Participant
+                  </Badge>
+                </div>
               )}
-            </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Host Info */}
+      {roomData?.current_video_title && (
+        <div className="absolute top-4 left-4 right-4">
+          <div className="bg-black/60 rounded-lg p-3 backdrop-blur-sm">
+            <h3 className="text-white font-medium">{roomData.current_video_title}</h3>
+            <p className="text-white/80 text-sm">
+              Host: {isHost ? 'You' : 'Room Host'}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Host Info Overlay */}
-      {roomData?.host && (
-        <div className="absolute top-4 left-4 glass-effect px-3 py-2 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <Avatar className="w-6 h-6">
-              <AvatarFallback className="text-xs">
-                {roomData.host.display_name?.[0] || 'H'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="text-xs">
-              <p className="text-white font-medium">{roomData.host.display_name}</p>
-              <Badge variant="secondary" className="text-xs px-1 py-0">
-                Host
-              </Badge>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Video Controls Overlay */}
-      <div 
-        className={`absolute bottom-0 left-0 right-0 video-overlay p-6 transition-opacity duration-300 ${
-          showControls ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <div className="space-y-4">
+      {/* Video Controls */}
+      {roomData?.current_video_url && (
+        <div
+          className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${
+            showControls ? 'opacity-100' : 'opacity-0'
+          }`}
+          onMouseEnter={() => setShowControls(true)}
+          onMouseLeave={() => setShowControls(false)}
+        >
           {/* Progress Bar */}
-          <div className="flex items-center space-x-3 text-white">
-            <span className="text-sm font-mono min-w-[3rem]">
-              {formatTime(position)}
-            </span>
-            <div 
-              className="flex-1 bg-white/20 rounded-full h-2 relative cursor-pointer"
-              onClick={handleProgressClick}
-            >
-              <div 
-                className="bg-primary h-full rounded-full transition-all duration-300"
-                style={{ width: `${duration ? (position / duration) * 100 : 0}%` }}
-              />
-            </div>
-            <span className="text-sm font-mono min-w-[3rem]">
-              {formatTime(duration)}
-            </span>
+          <div
+            className="w-full h-2 bg-white/20 rounded-full mb-4 cursor-pointer"
+            onClick={handleProgressClick}
+          >
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-150"
+              style={{ width: `${duration ? (position / duration) * 100 : 0}%` }}
+            />
           </div>
 
           {/* Control Buttons */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between text-white">
+            <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handlePlayPause}
-                className="text-white hover:bg-white/20"
-                disabled={!roomData?.current_video_url || (!isHost && !roomData?.is_playing)}
+                className="text-white hover:text-white/80"
+                disabled={!isHost}
               >
-                {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </Button>
-              
-              <div className="flex items-center space-x-2">
+
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleVolumeChange(volume > 0 ? 0 : 100)}
-                  className="text-white hover:bg-white/20"
+                  onClick={() => {
+                    if (videoRef.current) {
+                      videoRef.current.muted = !videoRef.current.muted;
+                    }
+                  }}
+                  className="text-white hover:text-white/80"
                 >
-                  {volume > 0 ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                  {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </Button>
                 <input
                   type="range"
                   min="0"
-                  max="100"
+                  max="1"
+                  step="0.1"
                   value={volume}
-                  onChange={(e) => handleVolumeChange(Number(e.target.value))}
-                  className="w-20 accent-primary"
+                  onChange={(e) => {
+                    if (videoRef.current) {
+                      videoRef.current.volume = parseFloat(e.target.value);
+                    }
+                  }}
+                  className="w-20"
                 />
               </div>
+
+              <span className="text-sm font-mono">
+                {formatTime(position)} / {formatTime(duration)}
+              </span>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
+              {!isHost && (
+                <Badge variant="secondary" className="text-xs">
+                  <MessageCircle className="w-3 h-3 mr-1" />
+                  Synced
+                </Badge>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white hover:bg-white/20"
-              >
-                <Settings className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-white/20"
+                onClick={handleFullscreen}
+                className="text-white hover:text-white/80"
               >
                 <Maximize className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
-}
+};
+
+export default VideoPlayer;

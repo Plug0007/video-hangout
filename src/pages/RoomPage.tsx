@@ -24,7 +24,7 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { useRealtime } from '@/hooks/useRealtime';
-import { VideoPlayer } from '@/components/VideoPlayer';
+import VideoPlayer from '@/components/VideoPlayer';
 import { ChatSection } from '@/components/ChatSection';
 import { ParticipantsList } from '@/components/ParticipantsList';
 import { roomService, Room } from '@/services/roomService';
