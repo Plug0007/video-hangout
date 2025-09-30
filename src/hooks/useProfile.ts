@@ -37,7 +37,7 @@ export function useProfile() {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
@@ -60,7 +60,7 @@ export function useProfile() {
         .update(updates)
         .eq('id', user.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         return { error };
